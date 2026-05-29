@@ -1,0 +1,45 @@
+{
+   "name": "brainer",
+   "version": "0.1.9",
+   "type": "module",
+   "bin": {
+      "brainer": "./dist/cli/index.js"
+   },
+   "scripts": {
+      "build:native": "cmake-js compile -d native",
+      "build": "npm run build:native && tsc",
+      "dev": "tsc --watch",
+      "start": "node dist/cli/index.js",
+      "brainer": "node dist/cli/index.js",
+      "lint": "tsc --noEmit",
+      "format": "prettier --write .",
+      "release": "./scripts/release.sh"
+   },
+   "engines": {
+      "node": ">=20"
+   },
+   "dependencies": {
+      "@clack/prompts": "^1.4.0",
+      "arktype": "^2.2.0",
+      "better-sqlite3": "^11.9.1",
+      "commander": "^14.0.0",
+      "ink": "^7.0.4",
+      "marked": "^18.0.4",
+      "marked-terminal": "^7.3.0",
+      "node-addon-api": "^8.3.1",
+      "picocolors": "^1.1.1",
+      "react": "^19.2.6",
+      "sqlite-vec": "^0.1.6"
+   },
+   "devDependencies": {
+      "cmake-js": "^7.3.0",
+      "@types/better-sqlite3": "^7.6.13",
+      "@types/marked-terminal": "^6.1.1",
+      "@types/node": "^25.9.1",
+      "@types/react": "^19.2.15",
+      "prettier": "^3.8.3",
+      "typescript": "^5.8.0"
+   },
+   "author": "xleddyl",
+   "license": "MIT"
+}

@@ -1,0 +1,101 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  NODE_VERSION: "22.16.0"
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-14
+            platform: darwin-arm64
+            node_platform: darwin-arm64
+          - os: ubuntu-latest
+            platform: linux-x64
+            node_platform: linux-x64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build
+        run: yarn build
+
+      - name: Download Node.js binary
+        run: |
+          NODE_ARCHIVE="node-v${NODE_VERSION}-${{ matrix.node_platform }}.tar.gz"
+          curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/${NODE_ARCHIVE}" -o node.tar.gz
+          mkdir -p _node
+          tar -xzf node.tar.gz -C _node --strip-components=1
+
+      - name: Package
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          ARCHIVE="brainer-v${VERSION}-${{ matrix.platform }}.tar.gz"
+
+          mkdir -p _package/brainer/bin _package/brainer/node
+
+          # Bundle Node.js runtime
+          cp _node/bin/node _package/brainer/node/
+
+          # Copy dist and native addon
+          cp -r dist _package/brainer/
+          cp -r native/build _package/brainer/native_build
+          cp package.json _package/brainer/
+
+          # Install production deps only
+          cd _package/brainer
+          yarn install --production --frozen-lockfile
+          cd ../..
+
+          # Create launcher that uses bundled Node
+          printf '#!/usr/bin/env bash\nSOURCE="$0"\nwhile [ -L "$SOURCE" ]; do SOURCE="$(readlink "$SOURCE")"; done\nSCRIPT_DIR="$(cd "$(dirname "$SOURCE")/.." && pwd)"\nexec "$SCRIPT_DIR/node/node" "$SCRIPT_DIR/dist/cli/index.js" "$@"\n' > _package/brainer/bin/brainer
+          chmod +x _package/brainer/bin/brainer
+
+          # Fix native addon path: native/build/Release → native_build/Release
+          sed -i.bak 's|../../native/build/Release/|../../native_build/Release/|' \
+            _package/brainer/dist/native/index.js
+          rm -f _package/brainer/dist/native/index.js.bak
+
+          tar -czf "$ARCHIVE" -C _package brainer
+          echo "ARCHIVE=$ARCHIVE" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}
+          path: ${{ env.ARCHIVE }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: artifacts/*
