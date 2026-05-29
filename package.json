@@ -1,6 +1,6 @@
 {
    "name": "brainer",
-   "version": "0.1.9",
+   "version": "0.1.10",
    "type": "module",
    "bin": {
       "brainer": "./dist/cli/index.js"

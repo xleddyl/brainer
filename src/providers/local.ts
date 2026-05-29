@@ -56,6 +56,13 @@ abstract class BaseLocalProvider {
   }
 }
 
+const COMMON_STOP_STRINGS = [
+  "<end_of_turn>",
+  "<|im_end|>",
+  "<|eot_id|>",
+  "</s>",
+];
+
 function detectStopStrings(ctx: NativeLlamaContext): string[] {
   const sentinel = "__BRAINER_SENTINEL__";
   const rendered = ctx.applyChatTemplate(
@@ -66,10 +73,15 @@ function detectStopStrings(ctx: NativeLlamaContext): string[] {
     false,
   );
   const idx = rendered.lastIndexOf(sentinel);
-  if (idx < 0) return [];
-  const suffix = rendered.slice(idx + sentinel.length).trim();
-  if (!suffix) return [];
-  return [suffix];
+  const detected: string[] = [];
+  if (idx >= 0) {
+    const suffix = rendered.slice(idx + sentinel.length).trim();
+    if (suffix) detected.push(suffix);
+  }
+  for (const s of COMMON_STOP_STRINGS) {
+    if (!detected.includes(s)) detected.push(s);
+  }
+  return detected;
 }
 
 export class LocalLLMProvider extends BaseLocalProvider implements LLMProvider {

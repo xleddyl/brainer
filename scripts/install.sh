@@ -115,9 +115,9 @@ main() {
   echo "  Version:  v${version}"
   echo "  Platform: ${platform}"
 
-  local tmpdir=""
+  local tmpdir
   tmpdir="$(mktemp -d)"
-  trap 'rm -rf "$tmpdir"' EXIT
+  trap "rm -rf '$tmpdir'" EXIT
 
   echo "  Downloading..."
   if ! curl -fsSL "$url" -o "${tmpdir}/${archive_name}"; then
